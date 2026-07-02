@@ -86,6 +86,8 @@ CONF_ENTITY_MANAGE_ACTION = "entity_manage_action"
 # Backwards-compatible constant kept for older in-progress flows.
 CONF_SENSOR_MANAGE_ACTION = CONF_ENTITY_MANAGE_ACTION
 PAGE_ACTION_REIMPORT = "reimport"
+PAGE_ACTION_DELETE_PAGE = "delete_page"
+CONF_DELETE_PAGE_DELETE_ENTITIES = "delete_entities"
 PAGE_ACTION_MANAGE_ENTITIES = "manage_entities"
 # Backwards-compatible constant kept for older in-progress flows.
 PAGE_ACTION_MANAGE_SENSORS = PAGE_ACTION_MANAGE_ENTITIES

@@ -29,6 +29,8 @@ async def async_setup_entry(
     for subentry in iter_config_subentries(entry):
         if getattr(subentry, "subentry_type", None) != SUBENTRY_TYPE_PAGE:
             continue
+        if (getattr(subentry, "data", {}) or {}).get("deleted"):
+            continue
         entities = _build_switches_for_page_subentry(hass, entry, subentry)
         if not entities:
             continue
@@ -76,6 +78,7 @@ class CompanionRenderSignatureSwitch(SwitchEntity, RestoreEntity):
     """Switch whose state is derived from live rendered Companion button state."""
 
     _attr_should_poll = False
+    _optimistic_grace_seconds = 0.5
 
     def __init__(
         self,
@@ -97,6 +100,8 @@ class CompanionRenderSignatureSwitch(SwitchEntity, RestoreEntity):
         self._last_match: str | None = None
         self._last_known_is_on = self._restore_import_or_mapping_state()
         self._state_quality = "import_confirmed_previous_state" if self._last_known_is_on is not None else "unknown"
+        self._optimistic_desired: bool | None = None
+        self._optimistic_until: float = 0.0
 
         self._attr_unique_id = str(planned_entity["unique_id"])
         self._attr_suggested_object_id = str(planned_entity.get("suggested_object_id") or "")
@@ -147,22 +152,81 @@ class CompanionRenderSignatureSwitch(SwitchEntity, RestoreEntity):
                 return coerced
         return None
 
-    def _matched_state(self) -> bool | None:
-        """Return confirmed state, or an educated guess from the previous known state."""
+    def _now(self) -> float:
+        """Return event loop time for debounce/optimistic state windows."""
+        try:
+            return float(self.hass.loop.time())
+        except Exception:
+            return 0.0
+
+    def _signature_state_for_live(self) -> bool | None:
+        """Return the state that the current live render confirms, if any."""
         if not self._state_data:
-            self._last_match = "no_live_state"
-            # Keep using the import-confirmed/restored previous-known state while
-            # no live render has arrived yet.
-            return self._last_known_is_on
+            return None
         fields = list(self._mapping_value("match_fields", ["text", "background", "text_color"]) or ["text", "background", "text_color"])
         on_signature = self._mapping_value("on_signature", {}) or {}
         off_signature = self._mapping_value("off_signature", {}) or {}
         if signature_matches(self._state_data, on_signature, fields):
+            return True
+        if signature_matches(self._state_data, off_signature, fields):
+            return False
+        return None
+
+    def _clear_optimistic_if_expired(self) -> None:
+        """Clear an optimistic press hold after its settling window expires."""
+        if self._optimistic_desired is None:
+            return
+        if self._now() >= self._optimistic_until:
+            self._optimistic_desired = None
+            self._optimistic_until = 0.0
+
+    def _matched_state(self) -> bool | None:
+        """Return confirmed state, or an educated/optimistic previous-known state."""
+        if not self._state_data:
+            self._last_match = "no_live_state"
+            # Keep using the import-confirmed/restored previous-known state while
+            # no live render has arrived yet. If the user just toggled, keep the
+            # optimistic state while Companion's visual feedback settles.
+            if self._optimistic_desired is not None and self._now() < self._optimistic_until:
+                self._last_known_is_on = self._optimistic_desired
+                self._state_quality = "optimistic_after_press_waiting_for_render"
+                return self._optimistic_desired
+            self._clear_optimistic_if_expired()
+            return self._last_known_is_on
+
+        live_match = self._signature_state_for_live()
+
+        # After a Companion press, Surface mode can briefly emit the previous
+        # visual state or a transient pressed/released render before the final
+        # feedback state arrives. During this small settling window, keep the HA
+        # switch on the requested state unless the live render already confirms
+        # that same requested state. This prevents the UI from flickering
+        # off/on or on/off immediately after a toggle.
+        if self._optimistic_desired is not None:
+            if live_match is self._optimistic_desired:
+                self._last_known_is_on = live_match
+                self._state_quality = "confirmed_by_render_signature_after_press"
+                self._last_match = "on_signature" if live_match else "off_signature"
+                self._optimistic_desired = None
+                self._optimistic_until = 0.0
+                return live_match
+            if self._now() < self._optimistic_until:
+                self._last_known_is_on = self._optimistic_desired
+                self._state_quality = "optimistic_after_press_waiting_for_render_settle"
+                if live_match is None:
+                    self._last_match = "optimistic_hold_while_live_signature_unknown"
+                else:
+                    self._last_match = "optimistic_hold_ignoring_previous_render"
+                return self._optimistic_desired
+            self._optimistic_desired = None
+            self._optimistic_until = 0.0
+
+        if live_match is True:
             self._last_match = "on_signature"
             self._last_known_is_on = True
             self._state_quality = "confirmed_by_render_signature"
             return True
-        if signature_matches(self._state_data, off_signature, fields):
+        if live_match is False:
             self._last_match = "off_signature"
             self._last_known_is_on = False
             self._state_quality = "confirmed_by_render_signature"
@@ -184,12 +248,12 @@ class CompanionRenderSignatureSwitch(SwitchEntity, RestoreEntity):
     @property
     def available(self) -> bool:
         """Available when a mapping exists and either live or previous-known state exists."""
-        return self._has_mapping() and (self._state_data is not None or self._last_known_is_on is not None)
+        return self._has_mapping() and (self._state_data is not None or self._last_known_is_on is not None or self._optimistic_desired is not None)
 
     @property
     def assumed_state(self) -> bool:
         """Mark the entity as assumed while using an educated/optimistic state."""
-        return self._state_quality != "confirmed_by_render_signature"
+        return not self._state_quality.startswith("confirmed_by_render_signature")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -202,6 +266,8 @@ class CompanionRenderSignatureSwitch(SwitchEntity, RestoreEntity):
             "last_signature_match": self._last_match,
             "last_known_state": ("on" if self._last_known_is_on is True else "off" if self._last_known_is_on is False else None),
             "state_quality": self._state_quality,
+            "optimistic_desired_state": ("on" if self._optimistic_desired is True else "off" if self._optimistic_desired is False else None),
+            "optimistic_until_seconds": round(max(0.0, self._optimistic_until - self._now()), 3) if self._optimistic_desired is not None else 0,
             "poc_entity_model": "render_signature_switch",
         }
         if self._state_data:
@@ -276,6 +342,8 @@ class CompanionRenderSignatureSwitch(SwitchEntity, RestoreEntity):
         # later live render update will confirm it or keep using the last known
         # state if the render no longer matches either stored signature.
         self._last_known_is_on = desired
-        self._state_quality = "optimistic_after_press_until_render_confirms"
+        self._optimistic_desired = desired
+        self._optimistic_until = self._now() + self._optimistic_grace_seconds
+        self._state_quality = "optimistic_after_press_waiting_for_render"
         self._last_match = "optimistic_after_press"
         self.async_write_ha_state()

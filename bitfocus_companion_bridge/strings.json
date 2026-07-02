@@ -142,6 +142,13 @@
           "data": {
             "sensor_manage_action": "Sensor action"
           }
+        },
+        "delete_page": {
+          "title": "Delete Companion page import",
+          "description": "Delete `{page_title}`. This removes the imported Companion page from this bridge. Choose whether Home Assistant entities for this page should also be permanently deleted.\n\n**Page**: {page_number}\n\n**Entities on this page**: {entity_count}\n\nWhen entities are deleted, their entity registry entries are removed by location-based unique_id. Dashboards and automations that reference these entities may break.",
+          "data": {
+            "delete_entities": "Also permanently delete all Home Assistant entities for this page"
+          }
         }
       },
       "error": {
@@ -167,7 +174,9 @@
       "abort": {
         "reconfigure_successful": "The existing Companion page import has been updated. No duplicate page was added.",
         "no_changes": "No entity changes were requested.",
-        "page_not_found": "Could not find the imported page to manage."
+        "page_not_found": "Could not find the imported page to manage.",
+        "page_deleted": "The Companion page import and related entities were removed.",
+        "page_entities_deleted": "The entities were removed and the page import was marked as deleted. Use the native Home Assistant Delete button to remove the empty page row if needed."
       }
     }
   },

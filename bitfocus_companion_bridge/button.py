@@ -27,6 +27,8 @@ async def async_setup_entry(
     for subentry in iter_config_subentries(entry):
         if getattr(subentry, "subentry_type", None) != SUBENTRY_TYPE_PAGE:
             continue
+        if (getattr(subentry, "data", {}) or {}).get("deleted"):
+            continue
         entities = _build_buttons_for_page_subentry(hass, entry, subentry)
         if not entities:
             continue

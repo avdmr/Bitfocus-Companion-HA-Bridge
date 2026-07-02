@@ -42,6 +42,7 @@ from .api import CannotConnect, async_probe_companion
 from .const import (
     CONF_HTTP_PORT,
     CONF_WEB_UI_PORT,
+    CONF_DELETE_PAGE_DELETE_ENTITIES,
     CONF_IMPORT_DECISIONS,
     CONF_IMPORT_FILE,
     CONF_IMPORT_PREVIEW,
@@ -73,6 +74,7 @@ from .const import (
     DEFAULT_SATELLITE_PORT,
     DOMAIN,
     MAX_DYNAMIC_CANDIDATE_FIELDS,
+    PAGE_ACTION_DELETE_PAGE,
     PAGE_ACTION_MANAGE_SENSORS,
     PAGE_ACTION_REIMPORT,
     OBSERVER_BACKENDS,
@@ -100,6 +102,11 @@ from .entity_model import (
     future_entity_metadata,
     observer_surface_metadata,
     page_unique_id,
+)
+from .cleanup import (
+    async_best_effort_remove_page_subentry,
+    remove_page_device,
+    remove_registry_entries_for_page,
 )
 from .live_state import (
     LiveButtonState,
@@ -183,11 +190,12 @@ class BitfocusCompanionBridgeConfigFlow(ConfigFlow, domain=DOMAIN):
                 title = data.get(CONF_NAME) or DEFAULT_NAME
                 options = {
                     CONF_OBSERVER_BACKEND: data.pop(CONF_OBSERVER_BACKEND),
-                    # Kept in storage for forward compatibility, but hidden in the POC UI
-                    # because it does not do anything until live visual-state discovery exists.
+                    # Kept in storage for migration compatibility, but hidden in the POC UI.
                     CONF_VISUAL_AUTODETECT: False,
-                    CONF_LEARNING_MODE: data.pop(CONF_LEARNING_MODE),
                 }
+                # Older development builds exposed learning_mode. It is no longer shown;
+                # discard any stale value from in-progress flows safely.
+                data.pop(CONF_LEARNING_MODE, None)
                 start_page_import = bool(data.pop(CONF_START_PAGE_IMPORT, True))
                 data.pop(CONF_TEST_CONNECTION, None)
 
@@ -211,7 +219,6 @@ class BitfocusCompanionBridgeConfigFlow(ConfigFlow, domain=DOMAIN):
                             translation_key="observer_backend",
                         )
                     ),
-                    vol.Required(CONF_LEARNING_MODE, default=False): BooleanSelector(),
                     vol.Required(CONF_TEST_CONNECTION, default=True): BooleanSelector(),
                     vol.Required(CONF_START_PAGE_IMPORT, default=True): BooleanSelector(),
                 }
@@ -259,10 +266,6 @@ class BitfocusCompanionBridgeOptionsFlow(OptionsFlowWithReload):
                             translation_key="observer_backend",
                         )
                     ),
-                    vol.Required(
-                        CONF_LEARNING_MODE,
-                        default=current.get(CONF_LEARNING_MODE, False),
-                    ): BooleanSelector(),
                 }
             ),
         )
@@ -611,6 +614,8 @@ class PageImportSubentryFlow(ConfigSubentryFlow):
             action = str(user_input.get(CONF_PAGE_MANAGE_ACTION) or PAGE_ACTION_REIMPORT)
             if action == PAGE_ACTION_MANAGE_SENSORS:
                 return await self.async_step_manage_sensors()
+            if action == PAGE_ACTION_DELETE_PAGE:
+                return await self.async_step_delete_page()
             return await self.async_step_user()
 
         return self.async_show_form(
@@ -661,6 +666,69 @@ class PageImportSubentryFlow(ConfigSubentryFlow):
                 "sensor_lines": self._manage_sensor_lines(sensors),
             },
         )
+
+    async def async_step_delete_page(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        """Delete an imported page and optionally cascade-delete its entities."""
+        page_subentry = self._current_page_subentry()
+        if page_subentry is None:
+            return self.async_abort(reason="page_not_found")
+
+        data = dict(page_subentry.data or {})
+        page_number = int(data.get("page_number") or 0)
+        entities = self._planned_sensor_entities(page_subentry)
+
+        if user_input is not None:
+            delete_entities = bool(user_input.get(CONF_DELETE_PAGE_DELETE_ENTITIES, True))
+            removed_entities = 0
+            if delete_entities and page_number:
+                removed_entities = remove_registry_entries_for_page(self.hass, self._get_entry(), page_number)
+                remove_page_device(self.hass, self._get_entry(), page_number)
+
+            removed_subentry = False
+            try:
+                removed_subentry = await async_best_effort_remove_page_subentry(self.hass, self._get_entry(), page_subentry)
+            except Exception:
+                _LOGGER.debug("Could not remove page subentry through Home Assistant subentry manager", exc_info=True)
+
+            if removed_subentry:
+                return self.async_abort(reason="page_deleted")
+
+            # Fallback for HA versions that do not expose subentry removal to flows:
+            # mark the page as deleted and empty the planned entity list so the
+            # integration will not recreate the entities/device on reload. The user
+            # can still use the native HA Delete menu to remove the now-empty row.
+            data["deleted"] = True
+            data["keep_entities_on_delete"] = not delete_entities
+            if delete_entities:
+                data["planned_entities"] = []
+            lifecycle = dict(data.get("import_lifecycle") or {})
+            lifecycle["deleted_from_manage_page"] = True
+            lifecycle["deleted_entities"] = removed_entities
+            data["import_lifecycle"] = lifecycle
+
+            return self.async_update_reload_and_abort(
+                self._get_entry(),
+                page_subentry,
+                title=f"Deleted Companion Page {page_number}" if page_number else getattr(page_subentry, "title", "Deleted Companion page"),
+                data=data,
+                unique_id=getattr(page_subentry, "unique_id", data.get("page_unique_id")),
+                reload_even_if_entry_is_unchanged=True,
+            )
+
+        return self.async_show_form(
+            step_id="delete_page",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_DELETE_PAGE_DELETE_ENTITIES, default=True): BooleanSelector(),
+                }
+            ),
+            description_placeholders={
+                "page_title": getattr(page_subentry, "title", "Companion page"),
+                "page_number": str(page_number or "?"),
+                "entity_count": str(len(entities)),
+            },
+        )
+
 
     def _current_page_subentry(self) -> Any | None:
         """Best-effort lookup of the page subentry being reconfigured.
@@ -719,6 +787,7 @@ class PageImportSubentryFlow(ConfigSubentryFlow):
         return [
             {"value": PAGE_ACTION_MANAGE_SENSORS, "label": "Manage imported entities"},
             {"value": PAGE_ACTION_REIMPORT, "label": "Re-import page export"},
+            {"value": PAGE_ACTION_DELETE_PAGE, "label": "Delete page import"},
         ]
 
     @staticmethod

@@ -18,6 +18,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, PLATFORMS, SUBENTRY_TYPE_PAGE
+from .cleanup import (
+    async_best_effort_remove_page_subentry,
+    page_number_from_device_entry,
+    remove_all_managed_registry_entries,
+    remove_all_page_devices,
+    remove_page_device,
+    remove_registry_entries_for_page,
+    remove_registry_entries_for_removed_pages,
+)
+from .entity_model import find_page_subentry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,11 +72,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     pages_by_number: dict[int, dict[str, Any]] = {}
     for subentry in page_subentries:
         try:
+            if subentry.data.get("deleted"):
+                continue
             page_number = subentry.data.get("page_number")
             if page_number is not None:
                 pages_by_number[int(page_number)] = dict(subentry.data)
         except Exception:
             _LOGGER.debug("Skipping malformed Bitfocus Companion Bridge page subentry", exc_info=True)
+
+    try:
+        stale_removed = remove_registry_entries_for_removed_pages(hass, entry)
+        if stale_removed:
+            _LOGGER.info("Cleaned up %s stale Bitfocus Companion Bridge entit(y/ies) for removed page subentries", stale_removed)
+    except Exception:
+        _LOGGER.debug("Could not clean stale Bitfocus Companion Bridge entities", exc_info=True)
 
     runtime = None
     live_states: dict[str, dict[str, Any]] = {}
@@ -155,3 +174,46 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
             await runtime.stop()
         except Exception:
             _LOGGER.debug("Error while removing Bitfocus Companion Bridge live-state runtime", exc_info=True)
+
+    try:
+        removed_entities = remove_all_managed_registry_entries(hass, entry)
+        removed_devices = remove_all_page_devices(hass, entry)
+        if removed_entities or removed_devices:
+            _LOGGER.info(
+                "Removed %s Bitfocus Companion Bridge entit(y/ies) and %s page device(s) while removing config entry",
+                removed_entities,
+                removed_devices,
+            )
+    except Exception:
+        _LOGGER.debug("Could not clean all Bitfocus Companion Bridge registry entries", exc_info=True)
+
+
+async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEntry, device_entry: Any) -> bool:
+    """Allow the user to remove a Companion page device from the device page.
+
+    Deleting a page device cascades to the location-based entities for that page.
+    The native HA device dialog cannot be extended by the integration, so this
+    function performs the cleanup after the user confirms Home Assistant's own
+    delete prompt.
+    """
+    page_number = page_number_from_device_entry(entry, device_entry)
+    if page_number is None:
+        return False
+
+    try:
+        removed = remove_registry_entries_for_page(hass, entry, page_number)
+        page_subentry = find_page_subentry(entry, page_number)
+        removed_subentry = False
+        if page_subentry is not None:
+            removed_subentry = await async_best_effort_remove_page_subentry(hass, entry, page_subentry)
+        remove_page_device(hass, entry, page_number)
+        _LOGGER.info(
+            "Removed Companion Page %s device with %s managed entit(y/ies); subentry_removed=%s",
+            page_number,
+            removed,
+            removed_subentry,
+        )
+    except Exception:
+        _LOGGER.debug("Could not remove Companion page device %s", page_number, exc_info=True)
+        return False
+    return True

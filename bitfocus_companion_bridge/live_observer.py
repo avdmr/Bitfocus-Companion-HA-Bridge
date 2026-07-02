@@ -305,6 +305,8 @@ def live_runtime_pages_from_subentries(entry: Any) -> list[RuntimePage]:
         if getattr(subentry, "subentry_type", None) != "page":
             continue
         data = dict(subentry.data or {})
+        if data.get("deleted"):
+            continue
         page_number = data.get("page_number")
         if page_number is None:
             continue
