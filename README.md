@@ -30,7 +30,8 @@ Subscription API mode using ADD-SUB / SUB-STATE.
 Button control through Companion HTTP Remote Control location press.
 Switch state derived from the rendered visual state of Companion buttons.
 
-##Manual
+## Manual
+
 **1. Add the Companion device IP**
 Add the IP address of your Bitfocus Companion instance.
 
