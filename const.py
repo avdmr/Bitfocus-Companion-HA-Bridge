@@ -1,0 +1,102 @@
+"""Constants for the Bitfocus Companion Bridge integration."""
+
+from __future__ import annotations
+
+DOMAIN = "bitfocus_companion_bridge"
+NAME = "Bitfocus Companion Bridge"
+MANUFACTURER = "Bitfocus"
+
+DEFAULT_NAME = "Bitfocus Companion"
+DEFAULT_HTTP_PORT = 8000
+DEFAULT_WEB_UI_PORT = 8000
+DEFAULT_SATELLITE_PORT = 16622
+DEFAULT_OBSERVER_BACKEND = "surface"
+
+PLATFORMS = ["sensor", "button", "switch"]
+
+CONF_HTTP_PORT = "http_port"
+CONF_WEB_UI_PORT = "web_ui_port"
+CONF_SATELLITE_PORT = "satellite_port"
+CONF_OBSERVER_BACKEND = "observer_backend"
+CONF_VISUAL_AUTODETECT = "visual_autodetect"  # Stored for migration compatibility; hidden in this POC UI.
+CONF_LEARNING_MODE = "learning_mode"
+CONF_TEST_CONNECTION = "test_connection"
+CONF_START_PAGE_IMPORT = "start_page_import"
+
+CONF_IMPORT_FILE = "import_file"
+CONF_IMPORT_TEXT = "import_text"
+CONF_FILENAME_HINT = "filename_hint"
+CONF_MANUAL_PAGE_NUMBER = "manual_page_number"
+CONF_PAGE_NUMBER = "page_number"
+CONF_PAGE_NAME = "page_name"
+CONF_PAGE_ID = "page_id"
+CONF_IMPORT_PREVIEW = "import_preview"
+CONF_IMPORT_DECISIONS = "import_decisions"
+CONF_SENSOR_CATEGORY = "sensor_category"
+CONF_SWITCH_CATEGORY = "switch_category"
+CONF_IMPORT_SENSOR_CANDIDATES = "import_sensor_candidates"
+CONF_SENSOR_IMPORT_MODE = "sensor_import_mode"
+CONF_SWITCH_IMPORT_MODE = "switch_import_mode"
+CONF_SWITCH_MAPPING_MODE = "switch_mapping_mode"
+CONF_SWITCH_INITIAL_STATE = "switch_initial_state"
+CONF_SWITCH_CURRENT_STATE = "switch_current_state"
+CONF_VERIFY_LIVE_ACCESS = "verify_live_access"
+CONF_LIVE_STATE_VERIFICATION = "live_state_verification"
+CONF_PAGE_OBSERVER_BACKEND = "page_observer_backend"
+
+SUBENTRY_TYPE_PAGE = "page"
+
+OBSERVER_BACKEND_SURFACE = "surface"
+OBSERVER_BACKEND_SUBSCRIPTION = "subscription"
+OBSERVER_BACKENDS = [OBSERVER_BACKEND_SURFACE, OBSERVER_BACKEND_SUBSCRIPTION]
+
+SENSOR_CATEGORY_NONE = "none"
+SENSOR_CATEGORY_DIAGNOSTIC = "diagnostic"
+SENSOR_CATEGORY_CONFIG = "config"
+ENTITY_CATEGORIES = [SENSOR_CATEGORY_NONE, SENSOR_CATEGORY_DIAGNOSTIC, SENSOR_CATEGORY_CONFIG]
+
+SENSOR_IMPORT_IMPORT = "import"
+SENSOR_IMPORT_IGNORE = "ignore"
+SENSOR_IMPORT_MODES = [SENSOR_IMPORT_IMPORT, SENSOR_IMPORT_IGNORE]
+
+SWITCH_IMPORT_BUTTON = "button"
+SWITCH_IMPORT_SWITCH = "switch"
+SWITCH_IMPORT_IGNORE = "ignore"
+SWITCH_IMPORT_MODES = [SWITCH_IMPORT_IGNORE, SWITCH_IMPORT_SWITCH, SWITCH_IMPORT_BUTTON]
+
+SWITCH_MAPPING_LEARN_LATER = "learn_later"
+SWITCH_MAPPING_DEFAULT_OFF_FEEDBACK_ON = "default_off_feedback_on"
+SWITCH_MAPPING_DEFAULT_ON_FEEDBACK_OFF = "default_on_feedback_off"
+SWITCH_MAPPING_MODES = [
+    SWITCH_MAPPING_LEARN_LATER,
+    SWITCH_MAPPING_DEFAULT_OFF_FEEDBACK_ON,
+    SWITCH_MAPPING_DEFAULT_ON_FEEDBACK_OFF,
+]
+
+SWITCH_INITIAL_UNKNOWN = "unknown"
+SWITCH_INITIAL_OFF = "off"
+SWITCH_INITIAL_ON = "on"
+SWITCH_INITIAL_STATES = [SWITCH_INITIAL_UNKNOWN, SWITCH_INITIAL_OFF, SWITCH_INITIAL_ON]
+
+MAX_DYNAMIC_CANDIDATE_FIELDS = 64
+
+# Manage imported entity actions.
+CONF_PAGE_MANAGE_ACTION = "page_manage_action"
+CONF_ENTITY_MANAGE_ACTION = "entity_manage_action"
+# Backwards-compatible constant kept for older in-progress flows.
+CONF_SENSOR_MANAGE_ACTION = CONF_ENTITY_MANAGE_ACTION
+PAGE_ACTION_REIMPORT = "reimport"
+PAGE_ACTION_MANAGE_ENTITIES = "manage_entities"
+# Backwards-compatible constant kept for older in-progress flows.
+PAGE_ACTION_MANAGE_SENSORS = PAGE_ACTION_MANAGE_ENTITIES
+ENTITY_MANAGE_NO_CHANGE = "no_change"
+ENTITY_MANAGE_ENABLE = "enable"
+ENTITY_MANAGE_DISABLE = "disable"
+ENTITY_MANAGE_DELETE = "delete"
+# Backwards-compatible names used by existing code paths.
+SENSOR_MANAGE_NO_CHANGE = ENTITY_MANAGE_NO_CHANGE
+SENSOR_MANAGE_ENABLE = ENTITY_MANAGE_ENABLE
+SENSOR_MANAGE_DISABLE = ENTITY_MANAGE_DISABLE
+SENSOR_MANAGE_DELETE = ENTITY_MANAGE_DELETE
+
+SIGNAL_LIVE_STATE_UPDATE = f"{DOMAIN}_live_state_update"
