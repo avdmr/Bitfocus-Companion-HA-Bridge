@@ -2,6 +2,12 @@
 
 Custom Home Assistant integration POC for importing Bitfocus Companion page exports as location-based Home Assistant entities.
 
+
+This is a custom Home Assistant integration for importing Bitfocus Companion page exports as location-based Home Assistant entities.
+
+This integration can automatically create button, switch, and sensor entities from exported Companion pages. A config flow guides you through the setup process and allows Companion buttons and sensor states to be used in Home Assistant automations.
+
+
 <img width="1101" height="607" alt="afbeelding" src="https://github.com/user-attachments/assets/659d85e1-e535-4226-8f96-ddbd76ea0134" />
 <img width="1423" height="798" alt="afbeelding" src="https://github.com/user-attachments/assets/57f8b225-894b-4b16-a614-81f4e15c323d" />
 
@@ -11,33 +17,30 @@ Custom Home Assistant integration POC for importing Bitfocus Companion page expo
 
 Copy `custom_components/bitfocus_companion_bridge` into your Home Assistant `custom_components` directory and restart Home Assistant.
 
-## What this component covers
+## Features
+Main config entry for one Companion instance.
+Companion page imports as config subentries.
+Imported page entities are grouped under the correct Companion page subentry.
+Location-based entity IDs, for example:
+sensor.companion_p1r1c3
+button.companion_p1r1c3
+switch.companion_p1r1c3
+Read-only live-state backends:
+Surface mode using an integration-owned observer surface.
+Subscription API mode using ADD-SUB / SUB-STATE.
+Button control through Companion HTTP Remote Control location press.
+Switch state derived from the rendered visual state of Companion buttons.
 
-- Main config entry for one Companion instance.
-- Companion page imports as config subentries.
-- Page entities are grouped under the correct Companion page subentry.
-- Location-based entity identity, for example:
-  - `sensor.companion_p1r1c3`
-  - `button.companion_p1r1c3`
-  - `switch.companion_p1r1c3`
-- Read-only live-state backends:
-  - Surface mode using an integration-owned observer surface.
-  - Subscription API mode using `ADD-SUB` / `SUB-STATE`.
-- Button control via Companion HTTP Remote Control location press.
-- Switch state derived from Companion rendered visual state.
-
-**Manual:**
+##Manual
 1. Add the Companion device IP
 Add the IP address of your Bitfocus Companion instance.
 
 <img width="1045" height="910" alt="afbeelding" src="https://github.com/user-attachments/assets/fba59146-0acc-4779-93c5-8ad9a50ae1e9" />
 
-
 2. Export a Companion page
 
 Export a Companion page as JSON or YAML.
 <img width="1293" height="571" alt="afbeelding" src="https://github.com/user-attachments/assets/a3737b58-934f-41f5-ab8b-c19e576d8609" />
-
 
 3. Import the page
 
@@ -58,7 +61,6 @@ Enable the Button Subscription API in Companion.
 This is only required when using subscription mode.
 <img width="816" height="352" alt="afbeelding" src="https://github.com/user-attachments/assets/d63ceec8-7ae9-41d6-a782-39587ae4739d" />
 
-
 5. Choose which entities to import
 
 Choose whether to import sensors, buttons, and optionally buttons as switches.
@@ -72,10 +74,3 @@ You can delete imported entities or re-import pages.
 
 It is recommended to delete existing imported entities before re-importing a page to avoid stale or duplicate entities.
 <img width="1138" height="660" alt="afbeelding" src="https://github.com/user-attachments/assets/de68e8e7-22ab-4628-88f9-40dd38af8ca9" />
-
-
-
-
-
-
-
