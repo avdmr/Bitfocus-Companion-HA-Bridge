@@ -1,8 +1,6 @@
 # Bitfocus Companion Bridge 
 
-_Custom Home Assistant integration POC for importing Bitfocus Companion page exports as location-based Home Assistant entities._
-
-This is a custom Home Assistant integration for importing Bitfocus Companion page exports as location-based Home Assistant entities.
+_Custom Home Assistant integration POC for importing Bitfocus Companion page exports as Home Assistant entities._
 
 This integration can automatically create button, switch, and sensor entities from exported Companion pages. A config flow guides you through the setup process and allows Companion buttons and sensor states to be used in Home Assistant automations.
 
