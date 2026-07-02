@@ -22,6 +22,10 @@ Copy `custom_components/bitfocus_companion_bridge` into your Home Assistant `cus
 - Switch state derived from Companion rendered visual state.
 
 
+<img width="1293" height="571" alt="afbeelding" src="https://github.com/user-attachments/assets/a3737b58-934f-41f5-ab8b-c19e576d8609" />
+
+
+
 <img width="1101" height="607" alt="afbeelding" src="https://github.com/user-attachments/assets/659d85e1-e535-4226-8f96-ddbd76ea0134" />
 
 
