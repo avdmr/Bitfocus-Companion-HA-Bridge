@@ -1,0 +1,216 @@
+{
+  "title": "Bitfocus Companion Bridge",
+  "config": {
+    "flow_title": "Bitfocus Companion Bridge",
+    "step": {
+      "user": {
+        "title": "Set up Bitfocus Companion Bridge",
+        "description": "Configure the Companion instance. This POC uses the Companion web/API port for settings links and HTTP Remote Control. The Satellite API port is used for Surface mode and Subscription API mode live-state access.",
+        "data": {
+          "name": "Name",
+          "host": "Companion host or IP address",
+          "http_port": "Companion web/API port",
+          "observer_backend": "Default live-state backend for new page imports",
+          "learning_mode": "Prepare learning mode",
+          "test_connection": "Test connection during setup",
+          "start_page_import": "Import a Companion page export after setup",
+          "satellite_port": "Satellite API port"
+        },
+        "data_description": {
+          "observer_backend": "Default only. Each page import asks which backend to use for that page. Surface creates one HA observer surface per page and is the safe default; Subscription is advanced and page-agnostic.",
+          "learning_mode": "Stored for a later listener. It will only learn unknown locations inside already imported pages.",
+          "start_page_import": "Starts the page-export import flow immediately after this Companion instance has been created. In the integration card this may still appear as a generic plus button because that is Home Assistant's subentry UI.",
+          "http_port": "The port where the Companion web app runs. Companion HTTP Remote Control uses this same IP and port. Default is 8000.",
+          "satellite_port": "The Companion Satellite API TCP port used for Surface mode and Subscription API mode. Default is 16622. This is configured once here and reused by all page imports."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Companion. Check the host, HTTP/Web UI port and that Companion is running. The Satellite TCP port is fixed by Companion and this POC uses 16622.",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This Companion instance is already configured.",
+      "no_entities": "This page does not have imported entities to manage."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bitfocus Companion Bridge settings",
+        "description": "Change the settings for this Companion instance. Imported pages stay linked to this instance. This POC stores the options but does not start live listeners yet.",
+        "data": {
+          "observer_backend": "Live-state backend to prepare",
+          "learning_mode": "Prepare learning mode"
+        },
+        "data_description": {
+          "observer_backend": "Stored for the later live listener. Changing this later should not remove imported pages or stored decisions.",
+          "learning_mode": "Stored for future pending-discovery behavior within imported pages only."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "page": {
+      "title": "Companion page export",
+      "step": {
+        "user": {
+          "title": "Import Companion page export",
+          "description": "Upload a `.json`, `.yaml`, `.yml` or `.companionconfig` page export, or paste the file content. Use either upload or paste, not both. After parsing, the next step asks how this page should be read live.",
+          "data": {
+            "import_file": "Upload page export file",
+            "import_text": "Or paste page export content"
+          }
+        },
+        "confirm_page": {
+          "title": "Confirm imported Companion page",
+          "description": "Detected page metadata:\n\n- Page name: `{page_name}`\n- Page id: `{page_id}`\n- Page number source: `{page_number_source}`\n- Companion build: `{companion_build}`\n- Grid: `{grid}`\n- Controls: `{controls_total}`\n- Buttons: `{buttons_total}`\n- Button candidates: `{button_candidates}`\n- Sensor candidates: `{sensor_candidates}`\n- Switch candidates: `{switch_candidates}`\n- Ignored existing Home Assistant actions: `{ignored_homeassistant_actions}`\n- Import mode: `{import_mode}`\n\nConfirm or correct the absolute Companion page number. The next step verifies that the selected live-state access mode can read this page before sensor/switch discovery is reviewed. The stored page import is linked to this Companion instance and this page number.",
+          "data": {
+            "page_number": "Companion page number"
+          }
+        },
+        "discovery_options": {
+          "title": "Review discovered candidates",
+          "description": "This compatibility page is no longer used by new imports. New imports review sensors and switches on separate pages.",
+          "data": {
+            "import_sensor_candidates": "Prepare all sensor candidates for future import",
+            "sensor_import_mode": "Sensor candidate action",
+            "switch_import_mode": "Switch candidate action"
+          }
+        },
+        "switch_state": {
+          "title": "Confirm guessed switch state",
+          "description": "The integration read the current live rendered state for each selected switch and compared it with the default and feedback/active styles from the export. Confirm or correct only the guessed current state; the ON/OFF render-signature mapping is stored in the background.\n\nFor Subscription mode this uses a temporary read-only ADD-SUB/SUB-STATE read, then REMOVE-SUB. Surface mode reads the integration-owned observer surface. No button presses are sent.\n\n**Selected switch candidates ({switch_count})**\n{switch_candidates}\n\nChoose `Current state is ON` or `Current state is OFF`. If the candidate is not a persistent switch, choose `Button`.",
+          "data": {
+            "switch_current_state": "Confirm current switch state"
+          }
+        },
+        "reconfigure": {
+          "title": "Manage Companion page import",
+          "description": "Manage `{page_title}` (Companion page `{page_number}`). You can re-import the page export, or manage the imported entities for this page. Stored entities: `{sensor_count}`.",
+          "data": {
+            "page_manage_action": "Action"
+          },
+          "data_description": {
+            "page_manage_action": "Choose whether to re-import this page export or manage entities that were already imported for this page."
+          }
+        },
+        "sensor_options": {
+          "title": "Review sensor candidates",
+          "description": "Review variable-text Companion buttons that can become Home Assistant sensors. Sensor discovery is based on the configured Companion button text string, for example `$(internal:time_hms_12)` or `$(custom:temperature)`. Button actions do not block sensor discovery. If the variable itself comes from Home Assistant, for example `$(homeassistant-:entity...)`, the default is `Ignore` to avoid echoing Home Assistant data back into Home Assistant. Imported sensor entities are named by Companion location, for example `sensor.companion_p1r1c3`.\n\n**Sensor candidates ({sensor_count})**\n{sensor_candidates}\n\nLocations use Companion's absolute format: `page/row/column`.",
+          "data": {
+            "import_sensor_candidates": "Prepare all sensor candidates for future import",
+            "sensor_import_mode": "Sensor candidate action"
+          },
+          "data_description": {
+            "sensor_import_mode": "Import this variable-text Companion button as a future sensor, or ignore it. Home Assistant sourced values default to Ignore.",
+            "import_sensor_candidates": "Bulk mode: imports all detected variable-text locations as sensors."
+          }
+        },
+        "switch_options": {
+          "title": "Review Companion buttons",
+          "description": "Review all functional Companion buttons that can become Home Assistant button or switch entities. Buttons that already call or reference Home Assistant are still shown, but default to `Ignore`. You can explicitly change them to `Button` or `Prepare as switch`. Imported entities are named only by Companion location, for example `button.companion_p1r1c6` or `switch.companion_p1r1c6`, not by the current Companion button label.\n\n**Button candidates ({switch_count})**\n{switch_candidates}\n\nIf one or more buttons are prepared as switches, the next page reads the current live render and asks you to confirm the guessed ON/OFF state.",
+          "data": {
+            "switch_import_mode": "Button import action"
+          },
+          "data_description": {
+            "switch_import_mode": "Choose whether this Companion button should become a button, be prepared as a switch, or be ignored."
+          }
+        },
+        "ignored_homeassistant_actions": {
+          "title": "Already linked to Home Assistant",
+          "description": "**Ignored Home Assistant actions ({ignored_count})**\n{ignored_homeassistant_actions}\n\nThese Companion controls already call existing Home Assistant entities through the Companion Home Assistant module. They are stored as explicit Ignore decisions to prevent duplicate or circular entities."
+        },
+        "verify_live_access": {
+          "title": "Verify live state access",
+          "description": "Bitfocus Companion Bridge could not verify live rendered-state access for Companion page `{page_number}` using backend `{backend}`. This page is shown only when the automatic check fails. When the check succeeds, the import continues without showing this step.\n\n**Current status**\n{status}\n\n**What to check in Companion**\n{instructions}\n\nOpen: {companion_url}\n\nAfter updating Companion, submit this page again. If the check succeeds, this page is skipped automatically and the import continues.",
+          "data": {}
+        },
+        "page_observer_backend": {
+          "title": "Choose live-state access mode",
+          "description": "Choose how Bitfocus Companion Bridge should read live rendered state for this imported page. The default is taken from the main Companion device configuration. Network ports are configured once in the main setup and reused here.\n\n**Surface mode — most secure default**\n{surface_mode}\n\nAfter the observer surface is created in Companion, set its Home Page / Current Page to the imported page. Also turn **Restrict pages accessible to this surface** ON and allow only that page.\n\n**Subscription API mode — advanced**\n{subscription_mode}\n\n**Warning**\n{subscription_warning}",
+          "data": {
+            "page_observer_backend": "Live-state access mode for this page"
+          },
+          "data_description": {
+            "page_observer_backend": "Surface mode creates one Home Assistant observer surface for this page. Subscription API mode uses ADD-SUB/SUB-STATE for absolute Companion locations and requires Button Subscriptions API."
+          }
+        },
+        "manage_sensors": {
+          "title": "Manage imported entities",
+          "description": "Manage imported entities for `{page_title}`. `No change` leaves an entity exactly as it is. `Disable entity` keeps the Home Assistant entity registry entry but stops the integration from loading the entity. `Delete permanently` removes the entity registry entry and removes it from this page import metadata. Use permanent delete carefully because dashboards and automations can reference the entity.\n\n**Imported entities**\n{sensor_lines}",
+          "data": {
+            "sensor_manage_action": "Sensor action"
+          }
+        }
+      },
+      "error": {
+        "choose_one_source": "Choose either file upload or pasted content, not both.",
+        "missing_import_source": "Upload a file or paste page export content.",
+        "invalid_page_export": "The content is not a valid Companion page export. It must be JSON/YAML with type: page and page.controls.",
+        "invalid_page_number": "Enter a valid page number.",
+        "unknown": "Unexpected error",
+        "live_access_failed": "Live-state verification failed. Follow the instructions on this page and submit again.",
+        "live_access_unknown": "Unexpected error while verifying live-state access.",
+        "invalid_port": "Enter a valid Companion Web UI port between 1 and 65535.",
+        "no_entities": "This page does not have imported entities to manage."
+      },
+      "entry_type": "Companion page export",
+      "initiate_flow": {
+        "user": "Import Companion page export",
+        "reconfigure": "Re-import Companion page export"
+      },
+      "flow_title": "Import Companion page export",
+      "create_entry": {
+        "default": "The Companion page import has been saved. Sensor, button and switch entities are created from your import choices. Entity names and unique IDs are based on the Companion location, for example sensor.companion_p1r1c3, not the button label shown in Companion."
+      },
+      "abort": {
+        "reconfigure_successful": "The existing Companion page import has been updated. No duplicate page was added.",
+        "no_changes": "No entity changes were requested.",
+        "page_not_found": "Could not find the imported page to manage."
+      }
+    }
+  },
+  "selector": {
+    "observer_backend": {
+      "options": {
+        "surface": "Surface mode",
+        "subscription": "Subscription API mode"
+      }
+    },
+    "switch_import_mode": {
+      "options": {
+        "ignore": "Ignore",
+        "switch": "Prepare as switch",
+        "button": "Button"
+      }
+    },
+    "switch_mapping_mode": {
+      "options": {
+        "learn_later": "Learn ON/OFF mapping later from live state",
+        "default_off_feedback_on": "Default style = OFF, feedback/active style = ON",
+        "default_on_feedback_off": "Default style = ON, feedback/active style = OFF"
+      }
+    },
+    "switch_initial_state": {
+      "options": {
+        "unknown": "Unknown / let live state decide",
+        "off": "Assume OFF until live state is received",
+        "on": "Assume ON until live state is received"
+      }
+    },
+    "sensor_import_mode": {
+      "options": {
+        "import": "Import",
+        "ignore": "Ignore"
+      }
+    },
+    "switch_current_state": {
+      "options": {
+        "on": "Current state is ON",
+        "off": "Current state is OFF",
+        "button": "Button"
+      }
+    }
+  }
+}
