@@ -2,7 +2,7 @@
 
 _Custom Home Assistant integration POC for importing Bitfocus Companion page exports as Home Assistant entities._
 
-This integration can automatically create button, switch, and sensor entities from exported Companion pages. A config flow guides you through the setup process and allows Companion buttons and sensor states to be used in Home Assistant automations.
+This integration can automatically create **button**, **switch**, and **sensor entities** from exported Companion pages. A config flow guides you through the setup process and allows Companion buttons and sensor states to be used in Home Assistant automations.
 
 
 <img width="1101" height="607" alt="afbeelding" src="https://github.com/user-attachments/assets/659d85e1-e535-4226-8f96-ddbd76ea0134" />
