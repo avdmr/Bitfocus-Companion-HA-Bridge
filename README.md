@@ -1,7 +1,6 @@
 # Bitfocus Companion Bridge 
 
-Custom Home Assistant integration POC for importing Bitfocus Companion page exports as location-based Home Assistant entities.
-
+_Custom Home Assistant integration POC for importing Bitfocus Companion page exports as location-based Home Assistant entities._
 
 This is a custom Home Assistant integration for importing Bitfocus Companion page exports as location-based Home Assistant entities.
 
