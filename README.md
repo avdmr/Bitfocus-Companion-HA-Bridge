@@ -33,6 +33,7 @@ Switch state derived from the rendered visual state of Companion buttons.
 ## Manual
 
 **1. Add the Companion device IP**
+
 Add the IP address of your Bitfocus Companion instance.
 
 <img width="1045" height="910" alt="afbeelding" src="https://github.com/user-attachments/assets/fba59146-0acc-4779-93c5-8ad9a50ae1e9" />
