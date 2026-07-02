@@ -19,14 +19,14 @@ Copy `custom_components/bitfocus_companion_bridge` into your Home Assistant `cus
 - Companion page imports as config subentries.
 - Imported page entities are grouped under the correct Companion page subentry.
 - Location-based entity IDs, for example:
-- sensor.companion_p1r1c3
-- button.companion_p1r1c3
-- switch.companion_p1r1c3
+ - sensor.companion_p1r1c3
+ - button.companion_p1r1c3
+ - switch.companion_p1r1c3
 - Read-only live-state backends:
-- Surface mode using an integration-owned observer surface.
-- Subscription API mode using ADD-SUB / SUB-STATE.
-- Button control through Companion HTTP Remote Control location press.
-- Switch state derived from the rendered visual state of Companion buttons.
+ - Surface mode using an integration-owned observer surface.
+ - Subscription API mode using ADD-SUB / SUB-STATE.
+ - Button control through Companion HTTP Remote Control location press.
+ - Switch state derived from the rendered visual state of Companion buttons.
 
 ## Manual
 
